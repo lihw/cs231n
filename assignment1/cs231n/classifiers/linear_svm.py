@@ -45,9 +45,9 @@ def svm_loss_naive(W, X, y, reg):
   dW /= num_train
 
   # Add regularization to the loss.
-  loss += reg * np.sum(W * W)
+  loss += reg * 0.5 * np.sum(W * W)
 
-  dW += reg * 2.0 * W
+  dW += reg * W
   #############################################################################
   # TODO:                                                                     #
   # Compute the gradient of the loss function and store it dW.                #
@@ -80,10 +80,10 @@ def svm_loss_vectorized(W, X, y, reg):
   for i in range(num_classes):
     scores[:, i] -= scores[range(num_train), y]    
   scores += 1
-  scores[scores < 0] = 0
   raw_scores = np.copy(scores)
+  scores[scores < 0] = 0
   scores[range(num_train), y] = 0
-  loss = np.sum(scores) / num_train + reg * np.sum(W * W)
+  loss = np.sum(scores) / num_train + 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -101,12 +101,14 @@ def svm_loss_vectorized(W, X, y, reg):
   #############################################################################
   weights = np.ones([num_train, num_classes])
   weights[range(num_train), y] = -1
-  weights *= raw_scores
+  weights[raw_scores < 0] = 0
   
   dW = np.zeros(W.shape)
   for i in range(num_train):
     dW += np.outer(X[i], weights[i])
-
+  
+  dW /= num_train
+  dW += reg * W
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
