@@ -22,17 +22,39 @@ def softmax_loss_naive(W, X, y, reg):
   # Initialize the loss and gradient to zero.
   loss = 0.0
   dW = np.zeros_like(W)
-
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  # loss
+  num_train = X.shape[0]
+  for i in range(num_train):
+    f = np.matmul(X[i], W)
+    f = np.exp(f) 
+    f = f / np.sum(f)
+    loss += -np.log(f)[y[i]]
+  loss /= num_train
+  loss += reg * 0.5 * np.sum(W * W)
+  
+  # gradient
+  f = np.matmul(X, W)
+  exp_f = np.exp(f)
+  probs = exp_f / np.sum(exp_f, axis = 1, keepdims = True)
+
+  dprobs = probs
+  dprobs[range(num_train), y] -= 1
+  dprobs /= num_train
+
+  for i in range(num_train):
+    dW += np.outer(X[i], dprobs[i])
+  
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
+
 
   return loss, dW
 
@@ -47,13 +69,26 @@ def softmax_loss_vectorized(W, X, y, reg):
   loss = 0.0
   dW = np.zeros_like(W)
 
+  num_train = X.shape[0]
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  # loss
+  f = np.matmul(X, W)
+  exp_f = np.exp(f)
+  probs = exp_f / np.sum(exp_f, axis = 1, keepdims = True)
+  loss = sum(-np.log(probs[range(num_train), y])) / num_train
+
+  # gradient
+  dprobs = probs
+  dprobs[range(num_train), y] -= 1
+  dprobs /= num_train
+
+  dW = np.matmul(X.T, dprobs)
+  
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
