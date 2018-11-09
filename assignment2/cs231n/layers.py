@@ -337,6 +337,7 @@ def layernorm_forward(x, gamma, beta, ln_param):
     """
     out, cache = None, None
     eps = ln_param.get('eps', 1e-5)
+    cache = {}
     ###########################################################################
     # TODO: Implement the training-time forward pass for layer norm.          #
     # Normalize the incoming data, and scale and  shift the normalized data   #
@@ -351,6 +352,12 @@ def layernorm_forward(x, gamma, beta, ln_param):
     x_var = np.sqrt(np.var(x, axis = 1, keepdims = True) + eps)
 
     x_norm = (x - x_mean) / x_var
+
+    cache['x_norm'] = np.copy(x_norm)
+    cache['x'] = np.copy(x)
+    cache['x_centered'] = np.copy(x - x_mean)
+    cache['inv_stdvar'] = 1.0 / x_var
+    cache['gamma'] = np.copy(gamma)
 
     out = x_norm * gamma + beta
 
@@ -385,18 +392,20 @@ def layernorm_backward(dout, cache):
     # still apply!                                                            #
     ###########################################################################
     N, D = dout.shape
-    dgamma = np.zeros(D)
+    dgamma = np.zeros(dout.shape)
     for i in range(N):
-      dgamma += dout[i] / cache['x_norm'][i]
-      dbeta += dout[i]
-
-
-
-    dgamma = np.sum(np.matmul(cache['x_norm'].T, dout), axis = 1)
+        dgamma += cache['x_norm'][i] * dout[i]
     dbeta = np.sum(dout, axis = 0) 
 
-    dx_norm = np.sum(np.matmul(dout, cache['gamma'].T))
+    dx_norm = np.matmul(dout, np.diag(cache['gamma']))
 
+    dx = np.zeros((D, D))
+    for i in range(N):
+        dx += (np.identity(D) - np.ones(shape = (D, D)) / D) * cache['inv_stdvar'][i][0] # dx_norm / dx D x D
+        dx += np.outer(cache['x_centered'][i], cache['x_centered'][i]) * (cache['inv_stdvar'][i][0] ** 3) * -2.0 / D
+
+    dx = np.matmul(dx_norm, dx.T)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
