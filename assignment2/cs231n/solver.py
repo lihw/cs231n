@@ -5,6 +5,7 @@ from builtins import range
 from builtins import object
 import os
 import pickle as pickle
+import sys
 
 import numpy as np
 
@@ -167,7 +168,7 @@ class Solver(object):
             self.optim_configs[p] = d
 
 
-    def _step(self):
+    def _step(self, t):
         """
         Make a single gradient update. This is called by train() and should not
         be called manually.
@@ -184,11 +185,18 @@ class Solver(object):
 
         # Perform a parameter update
         for p, w in self.model.params.items():
-            dw = grads[p]
-            config = self.optim_configs[p]
-            next_w, next_config = self.update_rule(w, dw, config)
-            self.model.params[p] = next_w
-            self.optim_configs[p] = next_config
+          try:
+            dw = grads[str(p)]
+          except KeyError as e:
+            print(p)
+            print(e)
+            print(self.model.params.keys())
+
+          config = self.optim_configs[p]
+          config.setdefault('t', t)
+          next_w, next_config = self.update_rule(w, dw, config)
+          self.model.params[p] = next_w
+          self.optim_configs[p] = next_config
 
 
     def _save_checkpoint(self):
@@ -263,7 +271,7 @@ class Solver(object):
         num_iterations = self.num_epochs * iterations_per_epoch
 
         for t in range(num_iterations):
-            self._step()
+            self._step(t)
 
             # Maybe print training loss
             if self.verbose and t % self.print_every == 0:
