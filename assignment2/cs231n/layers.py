@@ -768,7 +768,11 @@ def spatial_batchnorm_backward(dout, cache):
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
-    pass
+    N, C, H, W = dout.shape
+    dout_t = dout.transpose((0, 2, 3, 1))
+    dout_flat = np.reshape(dout_t, (-1, C))
+    dx, dgamma, dbeta = batchnorm_backward(dout_flat, cache)
+    dx = np.reshape(dx, (N, H, W, C)).transpose((0, 3, 1, 2))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -804,7 +808,23 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     # the bulk of the code is similar to both train-time batch normalization  #
     # and layer normalization!                                                # 
     ###########################################################################
-    pass
+    
+    N, C, H, W = dout.shape
+    x_t = x.transpose((0, 2, 3, 1))
+    x_flat = np.reshape(x_t, (-1, C))
+
+    cache = list()
+    out = np.zeros_like(x_flat)
+    
+    c = int(C / G)
+    for i in range(G): 
+        c0 = i * c
+        c1 = (i + 1) * c
+        out[c0:c1, :], cache1 = layernorm_forward(x_flat[c0:c1, :], gamma, beta, gn_param)
+        cache.append(cache1)
+
+    out = np.reshape(out, (N, H, W, C)).transpose((0, 3, 1, 2))
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -830,7 +850,21 @@ def spatial_groupnorm_backward(dout, cache):
     # TODO: Implement the backward pass for spatial group normalization.      #
     # This will be extremely similar to the layer norm implementation.        #
     ###########################################################################
-    pass
+    N, C, H, W = dout.shape
+    dout_t = x.transpose((0, 2, 3, 1))
+    dout_flat = np.reshape(dout_t, (-1, C))
+
+    dx = np.zeros_like(x_flat)
+    
+    c = int(C / G)
+    for i in range(G): 
+        c0 = i * c
+        c1 = (i + 1) * c
+        dx[c0:c1, :], cache1 = layernorm_backward(dout_flat[c0:c1, :], cache[i])
+
+    dx = np.reshape(dx, (N, H, W, C)).transpose((0, 3, 1, 2))
+
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
